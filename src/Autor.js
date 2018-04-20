@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 // import $ from 'jquery';
 import InputCustomizado from './components/InputCustomizado';
 import BotaoSubmitCustomizado from './components/BotaoSubmitCustomizado';
+import PubSub from 'pubsub-js';
 
 class FormularioAutor extends Component {
     constructor() {
@@ -53,7 +54,7 @@ class FormularioAutor extends Component {
         let lista = localStorage.getItem('lista') ? JSON.parse(localStorage.getItem('lista')) : [];
         lista.push({ id: this.createGuid(), nome: this.state.nome, email: this.state.email, senha: this.state.senha });
         localStorage.setItem('lista', JSON.stringify(lista));
-        this.props.callbackAtualizaListagem(lista);
+        PubSub.publish('atualiza-lista-autores', lista);
     }
 
     render() {
@@ -110,10 +111,6 @@ export default class AutorBox extends Component {
 
     }
 
-    atualizaListagem = (novaLista) => {
-        this.setState({ lista: novaLista });
-    }
-
     componentWillMount() {
         // $.ajax({
         //   url: "https://cdc-react.herokuapp.com/api/autores",
@@ -125,7 +122,9 @@ export default class AutorBox extends Component {
         // });
 
         this.getLista();
-
+        PubSub.subscribe('atualiza-lista-autores', (topico, novaLista) => {
+            this.setState({ lista: novaLista });
+        });
     }
 
 
@@ -140,7 +139,7 @@ export default class AutorBox extends Component {
     render() {
         return (
             <div>
-                <FormularioAutor callbackAtualizaListagem={this.atualizaListagem} />
+                <FormularioAutor />
                 <TabelaAutores lista={this.state.lista} />
             </div>
         );
