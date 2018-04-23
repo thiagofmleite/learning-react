@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
 // import $ from 'jquery';
 import InputCustomizado from './components/InputCustomizado';
-import BotaoSubmitCustomizado from './components/BotaoSubmitCustomizado';
 import PubSub from 'pubsub-js';
+// import TratadorErros from './TratadorErros';
 
 class FormularioAutor extends Component {
+
     constructor() {
         super();
         this.state = { nome: '', email: '', senha: '' };
@@ -14,7 +15,35 @@ class FormularioAutor extends Component {
         this.setSenha = this.setSenha.bind(this);
     }
 
-    setNome = (evento) => {
+    enviaForm(evento) {
+        evento.preventDefault();
+        // $.ajax({
+        //     url: 'http://localhost:8080/api/autores',
+        //     contentType: 'application/json',
+        //     dataType: 'json',
+        //     type: 'post',
+        //     data: JSON.stringify({ nome: this.state.nome, email: this.state.email, senha: this.state.senha }),
+        //     success: function (novaListagem) {
+        //         PubSub.publish('atualiza-lista-autores', novaListagem);
+        //         this.setState({ nome: '', email: '', senha: '' });
+        //     }.bind(this),
+        //     error: function (resposta) {
+        //         if (resposta.status === 400) {
+        //             new TratadorErros().publicaErros(resposta.responseJSON);
+        //         }
+        //     },
+        //     beforeSend: function () {
+        //         PubSub.publish("limpa-erros", {});
+        //     }
+        // });
+
+        let lista = localStorage.getItem('lista') ? JSON.parse(localStorage.getItem('lista')) : [];
+        lista.push({ id: this.createGuid(), nome: this.state.nome, email: this.state.email, senha: this.state.senha });
+        localStorage.setItem('lista', JSON.stringify(lista));
+        PubSub.publish('atualiza-lista-autores', lista);
+    }
+
+    setNome(evento) {
         this.setState({ nome: evento.target.value });
     }
 
@@ -34,70 +63,51 @@ class FormularioAutor extends Component {
         return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
     }
 
-    enviaForm(evento) {
-        evento.preventDefault();
-        // $.ajax({
-        //   url: 'https://cdc-react.herokuapp.com/api/autores',
-        //   contentType: 'application/json',
-        //   dataType: 'json',
-        //   type: 'post',
-        //   data: JSON.stringify({ nome: this.state.nome, email: this.state.email, senha: this.state.senha }),
-        //   success: function (resposta) {
-        //     console.log("enviado com sucesso");
-        //   },
-        //   error: function (resposta) {
-        //     console.log("erro");
-        //   }
-        // });
-
-
-        let lista = localStorage.getItem('lista') ? JSON.parse(localStorage.getItem('lista')) : [];
-        lista.push({ id: this.createGuid(), nome: this.state.nome, email: this.state.email, senha: this.state.senha });
-        localStorage.setItem('lista', JSON.stringify(lista));
-        PubSub.publish('atualiza-lista-autores', lista);
-    }
-
     render() {
         return (
             <div className="pure-form pure-form-aligned">
-                <form className="pure-form pure-form-aligned" onSubmit={this.enviaForm.bind(this)} method="post">
+                <form className="pure-form pure-form-aligned" onSubmit={this.enviaForm} method="post">
                     <InputCustomizado id="nome" type="text" name="nome" value={this.state.nome} onChange={this.setNome} label="Nome" />
                     <InputCustomizado id="email" type="email" name="email" value={this.state.email} onChange={this.setEmail} label="Email" />
                     <InputCustomizado id="senha" type="password" name="senha" value={this.state.senha} onChange={this.setSenha} label="Senha" />
-                    <BotaoSubmitCustomizado label="GRavar" />
+                    <div className="pure-control-group">
+                        <label></label>
+                        <button type="submit" className="pure-button pure-button-primary">Gravar</button>
+                    </div>
                 </form>
 
             </div>
+
         );
     }
 }
 
 class TabelaAutores extends Component {
 
-
-
     render() {
         return (
-            <table className="pure-table">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>email</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {
-                        this.props.lista.map(function (autor) {
-                            return (
-                                <tr key={autor.id}>
-                                    <td>{autor.nome}</td>
-                                    <td>{autor.email}</td>
-                                </tr>
-                            )
-                        })
-                    }
-                </tbody>
-            </table>
+            <div>
+                <table className="pure-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>email</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {
+                            this.props.lista.map(function (autor) {
+                                return (
+                                    <tr key={autor.id}>
+                                        <td>{autor.nome}</td>
+                                        <td>{autor.email}</td>
+                                    </tr>
+                                );
+                            })
+                        }
+                    </tbody>
+                </table>
+            </div>
         );
     }
 }
@@ -107,40 +117,33 @@ export default class AutorBox extends Component {
     constructor() {
         super();
         this.state = { lista: [] };
-        // this.atualizaListagem = this.atualizaListagem.bind(this);
-
     }
 
-    componentWillMount() {
+    componentDidMount() {
         // $.ajax({
-        //   url: "https://cdc-react.herokuapp.com/api/autores",
-        //   dataType: 'json',
-        //   success: function (resposta) {
-        //     console.log("chegou a resposta");
-        //     this.setState({ lista: resposta });
-        //   }.bind(this)
-        // });
+        //     url: "http://localhost:8080/api/autores",
+        //     dataType: 'json',
+        //     success: function (resposta) {
+        //         this.setState({ lista: resposta });
+        //     }.bind(this)
+        // }
+        // );
 
-        this.getLista();
-        PubSub.subscribe('atualiza-lista-autores', (topico, novaLista) => {
+        let resposta = localStorage.getItem('lista') ? JSON.parse(localStorage.getItem('lista')) : [];
+        this.setState({ lista: resposta });
+
+        PubSub.subscribe('atualiza-lista-autores', function (topico, novaLista) {
             this.setState({ lista: novaLista });
-        });
+        }.bind(this));
     }
 
-
-
-    getLista = () => {
-        let resposta = localStorage.getItem('lista');
-        let lista = resposta ? JSON.parse(resposta) : []
-        this.setState({ lista });
-        return lista;
-    }
 
     render() {
         return (
             <div>
                 <FormularioAutor />
                 <TabelaAutores lista={this.state.lista} />
+
             </div>
         );
     }
